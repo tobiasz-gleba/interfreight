@@ -1,0 +1,120 @@
+name: Deploy Cluster
+
+on:
+  push:
+    branches:
+      - master
+    paths-ignore:
+      - kubernetes/** # this is the path where the fluxcd will sync the manifests
+  workflow_dispatch:
+
+jobs:
+
+
+    install-cluster:
+      runs-on: self-hosted
+
+      steps:
+        - name: Checkout repository
+          uses: actions/checkout@v3
+
+        - name: Set up Kubernetes cluster
+          run: |
+            chmod +x init-cluster.sh
+            ./init-cluster.sh
+
+    install-flux:
+      needs: install-cluster
+      runs-on: self-hosted
+
+      steps:
+        - name: generate ssh key
+          run: |
+            echo "n" |ssh-keygen -b 4096 -C "github-action@interfreight" -f ~/.ssh/id_rsa -N ""
+            cat ~/.ssh/id_rsa.pub
+
+        # - name: Create Kubernetes Secret Form GitHub Variables
+        #   run: |
+        #     kubernetes_secret_name="github-settings"
+        #     kubernetes_secret_namespace="flux-system"
+
+        #     kubectl get pods
+
+        #     # Save all GitHub secrets and vars to files
+        #     echo "$ALL_MY_SECRETS" > secrets.json
+        #     echo "$ALL_MY_VARS" > vars.json
+            
+        #     # Create namespace if not exists
+        #     kubectl get namespace $kubernetes_secret_namespace || kubectl create namespace $kubernetes_secret_namespace
+
+        #     # Merge "vars.json" "secrets.json" into "merged.json"
+        #     jq -s '.[0] * .[1]' vars.json secrets.json > merged.json
+
+        #     jq -r 'to_entries | .[] | "\(.key)=\(.value)"' merged.json | while IFS='=' read -r key value; do
+        #       echo -n "$value" > "$key".txt
+        #     done
+
+        #     # Initialize the kubectl command
+        #     kubectl_cmd="kubectl create secret generic $kubernetes_secret_name --namespace=$kubernetes_secret_namespace"
+
+        #     # Loop over each .txt file in the current directory
+        #     for file in *.txt; do
+        #       # Extract the base name (without extension) to use as the key
+        #       key=$(basename "$file" .txt)
+              
+        #       # Append the --from-file option for each key-value pair
+        #       kubectl_cmd="$kubectl_cmd --from-file=$key=$file"
+        #     done
+
+        #     # Execute the command
+        #     echo "Executing: $kubectl_cmd"
+        #     $kubectl_cmd --dry-run=client -o yaml | kubectl apply -f -
+
+        #     # Add reflector annotations to sync the secret across all namespaces
+        #     kubectl annotate secret $kubernetes_secret_name --namespace=$kubernetes_secret_namespace \
+        #       reflector.v1.k8s.emberstack.com/reflection-allowed="true" \
+        #       reflector.v1.k8s.emberstack.com/reflection-auto-enabled="true" \
+        #       reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces="" \
+        #       --overwrite
+        #     rm -f *.txt
+        #     rm -f *.json
+    
+        #   shell: bash
+        #   env:
+        #     ALL_MY_SECRETS: ${{ toJSON(secrets) }}
+        #     ALL_MY_VARS: ${{ toJSON(vars) }}
+
+        # - name: Setup Flux CLI
+        #   uses: fluxcd/flux2/action@main
+        #   with:
+        #     version: '2.7.5'
+        
+        # - name: Install Flux
+        #   run: |
+        #     echo "y" | flux bootstrap git \
+        #       --components source-controller,kustomize-controller,notification-controller \
+        #       --components-extra image-reflector-controller,image-automation-controller \
+        #       --version=2.7.5 \
+        #       --namespace=flux-system \
+        #       --url=ssh://git@github.com/tobiasz-gleba/interfreight.git \
+        #       --branch=master \
+        #       --path=kubernetes \
+        #       --private-key-file="${HOME}/.ssh/id_rsa"
+
+        # - name: Create Docker Registry Secret
+        #   run: |
+        #     # Create Docker registry secret in flux-system namespace
+        #     kubectl create secret docker-registry harbor-registry \
+        #       --namespace=flux-system \
+        #       --docker-server=harbor.${{ vars.ROOT_DOMAIN }} \
+        #       --docker-username=admin \
+        #       --docker-password='${{ secrets.HARBOR_ADMIN_PASSWORD }}' \
+        #       --dry-run=client -o yaml | \
+        #     kubectl apply -f -
+
+        #     # Add reflector annotations to sync the secret across all namespaces
+        #     kubectl annotate secret harbor-registry --namespace=flux-system \
+        #       reflector.v1.k8s.emberstack.com/reflection-allowed="true" \
+        #       reflector.v1.k8s.emberstack.com/reflection-auto-enabled="true" \
+        #       reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces="" \
+        #       --overwrite

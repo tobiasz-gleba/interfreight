@@ -1,0 +1,25 @@
+# https://github.com/traefik/traefik-helm-chart/blob/master/traefik/values.yaml
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  finalizers:
+  - wrangler.cattle.io/on-helm-chart-remove
+  name: traefik
+  namespace: flux-system
+spec:
+  repo: https://helm.traefik.io/traefik
+  chart: traefik
+  targetNamespace: traefik-system
+  createNamespace: true
+  version: 37.4.0
+  valuesContent: |-
+    ports:
+      web:
+        redirections:
+          entryPoint: 
+            to: websecure
+            scheme: https
+            permanent: true
+    service:
+      spec:
+        externalTrafficPolicy: Local

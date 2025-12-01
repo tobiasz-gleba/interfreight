@@ -1,0 +1,161 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: secured-standard
+  namespace: traefik-system
+spec:
+  chain:
+    middlewares:
+    - name: rate-limit
+    - name: limit-body-size
+    - name: inflight-request-limit
+    - name: redirect-https
+    - name: compress
+    - name: security-headers
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: rate-limit
+  namespace: traefik-system
+spec:
+  rateLimit:
+    average: 150
+    burst: 200
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: limit-body-size
+  namespace: traefik-system
+spec:
+  buffering:
+    maxRequestBodyBytes: 31457280 # 30MB
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: inflight-request-limit
+  namespace: traefik-system
+spec:
+  inFlightReq:
+    amount: 100
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: compress
+  namespace: traefik-system
+spec:
+  compress: {}
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: security-headers
+  namespace: traefik-system
+spec:
+  headers:
+    customResponseHeaders:
+      Strict-Transport-Security: "max-age=31536000; includeSubDomains"
+      X-Frame-Options: "SAMEORIGIN"
+      Server: server
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-https
+  namespace: traefik-system
+spec:
+  redirectScheme:
+    scheme: https
+    permanent: true
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: error-pages
+  namespace: traefik-system
+spec:
+  errors:
+    status:
+      - "400-599"
+    query: /{status}.html
+    service:
+      name: error-pages
+      port: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name:  error-pages
+  namespace: traefik-system
+  labels:
+    app:  error-pages
+spec:
+  selector:
+    matchLabels:
+      app: error-pages
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app:  error-pages
+    spec:
+      containers:
+      - name:  error-pages
+        image:  tarampampam/error-pages:3.3.0
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 5
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 5
+          timeoutSeconds: 2
+          successThreshold: 1
+          failureThreshold: 3
+          periodSeconds: 10
+        env:
+        - name: TEMPLATE_NAME
+          value: shuffle
+        - name: SHOW_DETAILS
+          value: "true"
+        - name: SEND_SAME_HTTP_CODE
+          value: "true"
+        ports:
+        - containerPort: 8080
+          name:  error-pages
+      restartPolicy: Always
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: error-pages
+  namespace: traefik-system
+spec:
+  selector:
+    app: error-pages
+  ports:
+  - name: error-pages
+    protocol: TCP
+    port: 8080
+    targetPort: 8080

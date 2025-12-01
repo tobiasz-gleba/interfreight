@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: validation-worker
+  namespace: sprawdzaniekierowcow
+  labels:
+    app: validation-worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: validation-worker
+  strategy:
+    type: Recreate # Only one worker at a time
+  template:
+    metadata:
+      labels:
+        app: validation-worker
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: worker
+          image: ghcr.io/tobiasz-gleba/sprawdzaniekierowcow.pl:20251027104438 # {"$imagepolicy": "sprawdzaniekierowcow:sprawdzaniekierowcow"}
+          command: ['npx', 'tsx', 'scripts/validation-worker.ts']
+          workingDir: /app
+          env:
+            - name: DB_HOST
+              value: mysql.sprawdzaniekierowcow.svc.cluster.local
+            - name: DB_USERNAME
+              value: sprawdzaniekierowcow
+            - name: DB_NAME
+              value: sprawdzaniekierowcow
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: github-settings
+                  key: SHARED_DB_PASSWORD
+                  optional: false
+            - name: WORKER_POLL_INTERVAL
+              value: '3000' # 3 seconds between queue checks
+            - name: WORKER_DELAY
+              value: '2000' # 2 seconds between validations
+            - name: NODE_ENV
+              value: 'production'
+            - name: NPM_CONFIG_LOGLEVEL
+              value: 'error'
+          resources:
+            limits:
+              memory: '2Gi'
+              cpu: '1000m'
+            requests:
+              memory: '512Mi'
+              cpu: '250m'
+          livenessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'pgrep -f "validation-worker" > /dev/null'
+            initialDelaySeconds: 60
+            periodSeconds: 120
+            timeoutSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - 'pgrep -f "validation-worker" > /dev/null'
+            initialDelaySeconds: 10
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 2

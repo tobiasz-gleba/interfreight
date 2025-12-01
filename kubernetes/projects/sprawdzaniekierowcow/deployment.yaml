@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sprawdzaniekierowcow
+  namespace: sprawdzaniekierowcow
+  labels:
+    app: sprawdzaniekierowcow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sprawdzaniekierowcow
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: sprawdzaniekierowcow
+    spec:
+      initContainers:
+      - name: migrations
+        image: ghcr.io/tobiasz-gleba/sprawdzaniekierowcow.pl:20251027104438 # {"$imagepolicy": "sprawdzaniekierowcow:sprawdzaniekierowcow"}
+        command: ["npm", "run", "db:migrate"]
+        workingDir: /app
+        env:
+        - name: DB_HOST
+          value: mysql.sprawdzaniekierowcow.svc.cluster.local
+        - name: DB_USERNAME
+          value: sprawdzaniekierowcow
+        - name: DB_NAME
+          value: sprawdzaniekierowcow
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: github-settings
+              key: SHARED_DB_PASSWORD
+              optional: false
+      containers:
+      - name: sprawdzaniekierowcow
+        image: ghcr.io/tobiasz-gleba/sprawdzaniekierowcow.pl:20251027104438 # {"$imagepolicy": "sprawdzaniekierowcow:sprawdzaniekierowcow"}
+        ports:
+        - containerPort: 3000
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 3000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+        env:
+        - name: DB_HOST
+          value: mysql.sprawdzaniekierowcow.svc.cluster.local
+        - name: DB_USERNAME
+          value: sprawdzaniekierowcow
+        - name: DB_NAME
+          value: sprawdzaniekierowcow
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: github-settings
+              key: SHARED_DB_PASSWORD
+              optional: false
+        - name: PUBLIC_BASE_URL
+          value: https://sprawdzaniekierowcow.pl
+        - name: EMAIL_USER
+          value: kontakt@sprawdzaniekierowcow.pl
+        - name: EMAIL_PASS
+          valueFrom:
+            secretKeyRef:
+              name: github-settings
+              key: MAIL_PASSWORD_SPRAWDZANIEKIEROWCOW
+              optional: false
+        - name: SMTP_HOST
+          value: smtp.iq.pl
+        - name: SMTP_PORT
+          value: "587"
+        - name: NODE_ENV
+          value: "production"
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sprawdzaniekierowcow
+  namespace: sprawdzaniekierowcow
+spec:
+  selector:
+    app: sprawdzaniekierowcow
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 3000
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sprawdzaniekierowcow
+  namespace: sprawdzaniekierowcow
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: traefik-system-secured-standard@kubernetescrd
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    cert-manager.io/cluster-issuer: "http-acme-challenge"
+spec:
+  tls:
+    - hosts:
+        - sprawdzaniekierowcow.pl
+      secretName: sprawdzaniekierowcow-tls
+  rules:
+    - host: sprawdzaniekierowcow.pl
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: sprawdzaniekierowcow
+                port:
+                  number: 80

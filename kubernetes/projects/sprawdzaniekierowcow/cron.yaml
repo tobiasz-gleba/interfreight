@@ -1,0 +1,107 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mark-all-for-validation
+  namespace: sprawdzaniekierowcow
+  labels:
+    app: sprawdzaniekierowcow
+spec:
+  schedule: "0 0 * * *" # Run at midnight every day
+  concurrencyPolicy: Forbid # Prevent overlapping runs
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: sprawdzaniekierowcow-cron
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: mark-all
+            image: ghcr.io/tobiasz-gleba/sprawdzaniekierowcow.pl:20251027104438 # {"$imagepolicy": "sprawdzaniekierowcow:sprawdzaniekierowcow"}
+            command: ["npm", "run", "mark:all"]
+            workingDir: /app
+            env:
+            - name: DB_HOST
+              value: mysql.sprawdzaniekierowcow.svc.cluster.local
+            - name: DB_USERNAME
+              value: sprawdzaniekierowcow
+            - name: DB_NAME
+              value: sprawdzaniekierowcow
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: github-settings
+                  key: SHARED_DB_PASSWORD
+                  optional: false
+            resources:
+              limits:
+                memory: "256Mi"
+                cpu: "250m"
+              requests:
+                memory: "64Mi"
+                cpu: "50m"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: notify-invalid-drivers
+  namespace: sprawdzaniekierowcow
+  labels:
+    app: sprawdzaniekierowcow
+spec:
+  schedule: "0 8 * * *" # Run at 8 AM every day (after validation)
+  concurrencyPolicy: Forbid # Prevent overlapping runs
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: sprawdzaniekierowcow-cron
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: notify-invalid
+            image: ghcr.io/tobiasz-gleba/sprawdzaniekierowcow.pl:20251027104438 # {"$imagepolicy": "sprawdzaniekierowcow:sprawdzaniekierowcow"}
+            command: ["npm", "run", "notify:invalid"]
+            workingDir: /app
+            env:
+            - name: DB_HOST
+              value: mysql.sprawdzaniekierowcow.svc.cluster.local
+            - name: DB_USERNAME
+              value: sprawdzaniekierowcow
+            - name: DB_NAME
+              value: sprawdzaniekierowcow
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: github-settings
+                  key: SHARED_DB_PASSWORD
+                  optional: false
+            - name: PUBLIC_BASE_URL
+              value: https://sprawdzaniekierowcow.pl
+            - name: EMAIL_USER
+              value: kontakt@sprawdzaniekierowcow.pl
+            - name: EMAIL_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: github-settings
+                  key: MAIL_PASSWORD_SPRAWDZANIEKIEROWCOW
+                  optional: false
+            - name: SMTP_HOST
+              value: smtp.iq.pl
+            - name: SMTP_PORT
+              value: "587"
+            resources:
+              limits:
+                memory: "1Gi"
+                cpu: "500m"
+              requests:
+                memory: "256Mi"
+                cpu: "100m"

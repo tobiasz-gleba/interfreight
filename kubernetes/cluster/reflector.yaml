@@ -1,0 +1,18 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  finalizers:
+  - wrangler.cattle.io/on-helm-chart-remove
+  name: reflector
+  namespace: flux-system
+spec:
+  version: 9.0.322
+  chart: reflector
+  repo: https://emberstack.github.io/helm-charts
+  failurePolicy: abort
+  targetNamespace: reflector-system
+  createNamespace: true
+  valuesContent: |-
+    cron:
+      enabled: true
+      schedule: "* * * * *"

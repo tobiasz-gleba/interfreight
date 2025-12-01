@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sprawdzaniekierowcow
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: sprawdzaniekierowcow
+  namespace:  sprawdzaniekierowcow
+spec:
+  image: ghcr.io/tobiasz-gleba/sprawdzaniekierowcow.pl
+  interval: 10s
+  provider: generic
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: sprawdzaniekierowcow
+  namespace: sprawdzaniekierowcow
+spec:
+  imageRepositoryRef:
+    name: sprawdzaniekierowcow
+  policy:
+    numerical:
+      order: asc
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageUpdateAutomation
+metadata:
+  name: sprawdzaniekierowcow
+  namespace: sprawdzaniekierowcow
+spec:
+  interval: 10s
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  git:
+    checkout:
+      ref:
+        branch: master
+    push:
+      branch: master
+    commit:
+      author:
+        email: tobiasz.gleba24@gmail.com
+        name: tobiasz-gleba

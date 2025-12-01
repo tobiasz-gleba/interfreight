@@ -1,0 +1,21 @@
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  finalizers:
+  - wrangler.cattle.io/on-helm-chart-remove
+  name: longhorn
+  namespace: flux-system
+spec:
+  version: v1.10.1
+  chart: longhorn
+  repo: https://charts.longhorn.io
+  failurePolicy: abort
+  targetNamespace: longhorn-system
+  createNamespace: true
+  valuesContent: |-
+    persistence:
+      defaultDataLocality: best-effort
+      migratable: true
+      defaultClassReplicaCount: 1
+    defaultSettings:
+      defaultDataLocality: best-effort
