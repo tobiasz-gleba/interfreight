@@ -18,6 +18,9 @@ jobs:
         - name: Checkout repository
           uses: actions/checkout@v3
 
+        - name: Show IP address
+          run: hostname -I
+
         - name: Set up Kubernetes cluster
           run: |
             chmod +x init-cluster.sh
