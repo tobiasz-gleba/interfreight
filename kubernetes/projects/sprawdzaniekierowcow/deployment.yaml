@@ -112,15 +112,7 @@ kind: Ingress
 metadata:
   name: sprawdzaniekierowcow
   namespace: sprawdzaniekierowcow
-  annotations:
-    traefik.ingress.kubernetes.io/router.middlewares: traefik-system-secured-standard@kubernetescrd
-    traefik.ingress.kubernetes.io/router.tls: "true"
-    cert-manager.io/cluster-issuer: "http-acme-challenge"
 spec:
-  tls:
-    - hosts:
-        - sprawdzaniekierowcow.pl
-      secretName: sprawdzaniekierowcow-tls
   rules:
     - host: sprawdzaniekierowcow.pl
       http:
