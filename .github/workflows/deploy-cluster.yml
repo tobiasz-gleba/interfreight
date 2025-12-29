@@ -95,7 +95,6 @@ jobs:
             echo "y" | flux bootstrap git \
               --components source-controller,kustomize-controller,notification-controller \
               --components-extra image-reflector-controller,image-automation-controller \
-              --version=2.7.5 \
               --namespace=flux-system \
               --url=ssh://git@github.com/tobiasz-gleba/interfreight.git \
               --branch=master \
