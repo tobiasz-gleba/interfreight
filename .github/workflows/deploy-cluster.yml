@@ -85,37 +85,37 @@ jobs:
             ALL_MY_SECRETS: ${{ toJSON(secrets) }}
             ALL_MY_VARS: ${{ toJSON(vars) }}
 
-        # - name: Setup Flux CLI
-        #   uses: fluxcd/flux2/action@main
-        #   with:
-        #     version: '2.7.5'
+        - name: Setup Flux CLI
+          uses: fluxcd/flux2/action@main
+          with:
+            version: 'latest'
         
-        # - name: Install Flux
-        #   run: |
-        #     echo "y" | flux bootstrap git \
-        #       --components source-controller,kustomize-controller,notification-controller \
-        #       --components-extra image-reflector-controller,image-automation-controller \
-        #       --version=2.7.5 \
-        #       --namespace=flux-system \
-        #       --url=ssh://git@github.com/tobiasz-gleba/interfreight.git \
-        #       --branch=master \
-        #       --path=kubernetes \
-        #       --private-key-file="${HOME}/.ssh/id_rsa"
+        - name: Install Flux
+          run: |
+            echo "y" | flux bootstrap git \
+              --components source-controller,kustomize-controller,notification-controller \
+              --components-extra image-reflector-controller,image-automation-controller \
+              --version=2.7.5 \
+              --namespace=flux-system \
+              --url=ssh://git@github.com/tobiasz-gleba/interfreight.git \
+              --branch=master \
+              --path=kubernetes \
+              --private-key-file="${HOME}/.ssh/id_rsa"
 
-        # - name: Create Docker Registry Secret
-        #   run: |
-        #     # Create Docker registry secret in flux-system namespace
-        #     kubectl create secret docker-registry harbor-registry \
-        #       --namespace=flux-system \
-        #       --docker-server=harbor.${{ vars.ROOT_DOMAIN }} \
-        #       --docker-username=admin \
-        #       --docker-password='${{ secrets.HARBOR_ADMIN_PASSWORD }}' \
-        #       --dry-run=client -o yaml | \
-        #     kubectl apply -f -
+        - name: Create Docker Registry Secret
+          run: |
+            # Create Docker registry secret in flux-system namespace
+            kubectl create secret docker-registry harbor-registry \
+              --namespace=flux-system \
+              --docker-server=harbor.${{ vars.ROOT_DOMAIN }} \
+              --docker-username=admin \
+              --docker-password='${{ secrets.HARBOR_ADMIN_PASSWORD }}' \
+              --dry-run=client -o yaml | \
+            kubectl apply -f -
 
-        #     # Add reflector annotations to sync the secret across all namespaces
-        #     kubectl annotate secret harbor-registry --namespace=flux-system \
-        #       reflector.v1.k8s.emberstack.com/reflection-allowed="true" \
-        #       reflector.v1.k8s.emberstack.com/reflection-auto-enabled="true" \
-        #       reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces="" \
-        #       --overwrite
+            # Add reflector annotations to sync the secret across all namespaces
+            kubectl annotate secret harbor-registry --namespace=flux-system \
+              reflector.v1.k8s.emberstack.com/reflection-allowed="true" \
+              reflector.v1.k8s.emberstack.com/reflection-auto-enabled="true" \
+              reflector.v1.k8s.emberstack.com/reflection-allowed-namespaces="" \
+              --overwrite
