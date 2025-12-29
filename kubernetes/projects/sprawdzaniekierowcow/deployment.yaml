@@ -114,7 +114,7 @@ metadata:
   namespace: sprawdzaniekierowcow
 spec:
   rules:
-    - host: sprawdzaniekierowcow.pl
+    - host: sprawdzaniekierowcow.interfreight.pl
       http:
         paths:
           - path: /
