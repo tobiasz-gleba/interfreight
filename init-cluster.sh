@@ -3,7 +3,7 @@
 set -e
 
 # Use a stable k3s version known to work with Flux
-INSTALL_K3S_EXEC="--disable traefik --disable local-storage"
+INSTALL_K3S_EXEC="--disable traefik --disable local-storage --write-kubeconfig-mode 644"
 
 echo "Updating system and installing dependencies..."
 sudo apt-get update -y
