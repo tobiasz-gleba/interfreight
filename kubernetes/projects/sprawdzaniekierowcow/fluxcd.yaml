@@ -3,7 +3,7 @@ kind: Namespace
 metadata:
   name: sprawdzaniekierowcow
 ---
-apiVersion: image.toolkit.fluxcd.io/v1beta2
+apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageRepository
 metadata:
   name: sprawdzaniekierowcow
@@ -13,7 +13,7 @@ spec:
   interval: 10s
   provider: generic
 ---
-apiVersion: image.toolkit.fluxcd.io/v1beta2
+apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImagePolicy
 metadata:
   name: sprawdzaniekierowcow
@@ -25,7 +25,7 @@ spec:
     numerical:
       order: asc
 ---
-apiVersion: image.toolkit.fluxcd.io/v1beta1
+apiVersion: image.toolkit.fluxcd.io/v1
 kind: ImageUpdateAutomation
 metadata:
   name: sprawdzaniekierowcow
